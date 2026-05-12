@@ -129,20 +129,3 @@ assets/
 ui/                     图标、动效和 UI 资源
 ```
 
-## 发布前检查
-
-建议发布前执行：
-
-```bash
-flutter clean
-flutter pub get
-flutter analyze
-flutter build apk --release
-```
-
-确认：
-
-- APK 中不包含真实 API Key。
-- 大模型文件不进入 GitHub 仓库。
-- 设置页可以正常配置 DeepSeek。
-- 语音识别模型文件已按路径放置。
