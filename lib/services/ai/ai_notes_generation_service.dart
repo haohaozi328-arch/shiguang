@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../utils/ui_formatters.dart';
+import 'ai_error_formatter.dart';
 import 'ai_service_config.dart';
 
 /// AI笔记生成服务 - 当前仅保留 DeepSeek
@@ -66,7 +67,9 @@ class AINotesGenerationService {
       );
       await _generateWithDeepseek(prompt, existingContent: existingContent);
     } catch (e) {
-      _noteStreamController.addError(e);
+      final formatted = AiServiceException(formatAiError(e));
+      _noteStreamController.addError(formatted);
+      throw formatted;
     }
   }
 
@@ -78,26 +81,33 @@ class AINotesGenerationService {
       throw Exception('DeepSeek API Key 为空');
     }
 
-    final dio = Dio();
-    final response = await dio.post(
-      _chatCompletionsUrl(_customApiUrl ?? AIServiceConfig.getCurrentApiUrl()),
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $_deepseekApiKey',
-          'Content-Type': 'application/json',
+    late final Response<dynamic> response;
+    try {
+      final dio = Dio();
+      response = await dio.post(
+        _chatCompletionsUrl(
+          _customApiUrl ?? AIServiceConfig.getCurrentApiUrl(),
+        ),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $_deepseekApiKey',
+            'Content-Type': 'application/json',
+          },
+          responseType: ResponseType.stream,
+        ),
+        data: {
+          'model': _customModel ?? AIServiceConfig.getCurrentModel(),
+          'messages': [
+            {'role': 'system', 'content': '你是拾光笔记的课堂笔记整理助手。'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'stream': true,
+          'temperature': 0.25,
         },
-        responseType: ResponseType.stream,
-      ),
-      data: {
-        'model': _customModel ?? AIServiceConfig.getCurrentModel(),
-        'messages': [
-          {'role': 'system', 'content': '你是拾光笔记的课堂笔记整理助手。'},
-          {'role': 'user', 'content': prompt},
-        ],
-        'stream': true,
-        'temperature': 0.25,
-      },
-    );
+      );
+    } catch (error) {
+      throw AiServiceException(formatAiError(error));
+    }
 
     String generatedContent = '';
     final baseContent = formatAiNoteText(existingContent);

@@ -11,6 +11,7 @@ import '../models/dashboard_stats.dart';
 import '../models/note_entry.dart';
 import '../models/voice_record.dart';
 import '../services/ai/ai_qa_history_service.dart';
+import '../services/ai/ai_error_formatter.dart';
 import '../services/ai/ai_qa_service.dart';
 import '../services/ai/note_retrieval_service.dart';
 import '../theme/app_theme.dart';
@@ -424,12 +425,13 @@ class _AiViewState extends State<_AiView> {
       if (!mounted) {
         return;
       }
+      final message = formatAiError(e);
       setState(() {
-        _error = e.toString();
+        _error = message;
       });
       _replaceAssistantMessage(
         assistantId,
-        content: '问答失败：$e',
+        content: '问答失败：$message',
         citations: const [],
       );
     } finally {

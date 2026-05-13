@@ -13,6 +13,7 @@ import '../models/course.dart';
 import '../models/note_entry.dart';
 import '../models/photo_record.dart';
 import '../services/ai_note_export_service.dart';
+import '../services/ai/ai_error_formatter.dart';
 import '../services/ai/ai_notes_generation_service.dart';
 import '../services/ai/ai_service_config.dart';
 import '../services/ai/realtime_transcription_service.dart';
@@ -746,15 +747,27 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
 
     try {
       await _retryAiSub?.cancel();
-      _retryAiSub = service.noteStream.listen((content) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _aiController.text = formatAiNoteText(content);
-        });
-        _scheduleGeneratedAutoSave();
-      });
+      _retryAiSub = service.noteStream.listen(
+        (content) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _aiController.text = formatAiNoteText(content);
+          });
+          _scheduleGeneratedAutoSave();
+        },
+        onError: (error) {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _aiGenerationState = AiGenerationState.failed;
+            _aiGenerationError = 'AI 生成失败：${formatAiError(error)}';
+            _isRetryingAi = false;
+          });
+        },
+      );
 
       final courses = await repository.getCourses();
       final course = _resolveCourse(courses);
@@ -780,9 +793,10 @@ class _NoteDetailScreenState extends State<NoteDetailScreen> {
       if (!mounted) {
         return;
       }
+      final message = formatAiError(e);
       setState(() {
         _aiGenerationState = AiGenerationState.failed;
-        _aiGenerationError = 'AI 生成失败：$e';
+        _aiGenerationError = 'AI 生成失败：$message';
         _isRetryingAi = false;
       });
       await _saveNote(silent: true, force: true);

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import '../../models/ai_qa_message.dart';
+import 'ai_error_formatter.dart';
 import 'ai_service_config.dart';
 
 class AiQaService {
@@ -30,26 +31,31 @@ class AiQaService {
       throw Exception('DeepSeek API Key 为空');
     }
 
-    final dio = Dio();
-    final response = await dio.post(
-      _chatCompletionsUrl(AIServiceConfig.getCurrentApiUrl()),
-      options: Options(
-        headers: {
-          'Authorization': 'Bearer $apiKey',
-          'Content-Type': 'application/json',
+    late final Response<dynamic> response;
+    try {
+      final dio = Dio();
+      response = await dio.post(
+        _chatCompletionsUrl(AIServiceConfig.getCurrentApiUrl()),
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $apiKey',
+            'Content-Type': 'application/json',
+          },
+          responseType: ResponseType.stream,
+        ),
+        data: {
+          'model': AIServiceConfig.getCurrentModel(),
+          'messages': [
+            {'role': 'system', 'content': '你是拾光笔记的问答助手。'},
+            {'role': 'user', 'content': prompt},
+          ],
+          'stream': true,
+          'temperature': 0.2,
         },
-        responseType: ResponseType.stream,
-      ),
-      data: {
-        'model': AIServiceConfig.getCurrentModel(),
-        'messages': [
-          {'role': 'system', 'content': '你是拾光笔记的问答助手。'},
-          {'role': 'user', 'content': prompt},
-        ],
-        'stream': true,
-        'temperature': 0.2,
-      },
-    );
+      );
+    } catch (error) {
+      throw AiServiceException(formatAiError(error));
+    }
 
     await for (final line
         in response.data.stream

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/ai/realtime_transcription_service.dart';
 import '../services/ai/ai_notes_generation_service.dart';
+import '../services/ai/ai_error_formatter.dart';
 import '../services/ai/ai_service_config.dart';
 import '../services/foreground_service_handler.dart';
 import '../theme/app_theme.dart';
@@ -177,15 +178,23 @@ class _VoiceSheetState extends State<VoiceSheet>
     });
 
     // 监听 AI 笔记流
-    _noteStreamSub = _aiService.noteStream.listen((content) {
-      final formattedContent = _mergeGeneratedNoteUpdate(content);
-      _generatedNote = formattedContent;
-      _persistGeneratedNoteSessionState();
-      widget.onGeneratedNoteChanged?.call(formattedContent);
-      if (mounted && !_isDisposed) {
-        _updateGeneratedNoteTypewriter(formattedContent);
-      }
-    });
+    _noteStreamSub = _aiService.noteStream.listen(
+      (content) {
+        final formattedContent = _mergeGeneratedNoteUpdate(content);
+        _generatedNote = formattedContent;
+        _persistGeneratedNoteSessionState();
+        widget.onGeneratedNoteChanged?.call(formattedContent);
+        if (mounted && !_isDisposed) {
+          _updateGeneratedNoteTypewriter(formattedContent);
+        }
+      },
+      onError: (error) {
+        final message = formatAiError(error);
+        if (mounted && !_isDisposed) {
+          setState(() => _error = 'AI 生成失败: $message');
+        }
+      },
+    );
   }
 
   @override
@@ -515,12 +524,13 @@ class _VoiceSheetState extends State<VoiceSheet>
     } catch (e) {
       _aiRunning = false;
       _isGenerating = false;
+      final message = formatAiError(e);
       if (mounted) {
         setState(() {
-          _error = 'AI 生成失败: $e';
+          _error = 'AI 生成失败: $message';
         });
       }
-      debugPrint('[VoiceSheet] AI生成失败: $e');
+      debugPrint('[VoiceSheet] AI生成失败: $message');
     } finally {
       await _cleanupDetachedAiResourcesIfNeeded();
     }
