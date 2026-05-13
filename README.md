@@ -11,6 +11,16 @@
 - 文字笔记、拍照记录、AI 整理详情展示。
 - 本地笔记知识库问答；没有找到笔记依据时，会提示后使用模型通用能力回答。
 
+## 应用截图
+
+<p align="center">
+  <img src="docs/screenshots/home.jpg" alt="拾光 AI 首页" width="260" />
+  <img src="docs/screenshots/courses.jpg" alt="拾光 AI 课程页" width="260" />
+  <img src="docs/screenshots/detail.jpg" alt="拾光 AI 笔记详情页" width="260" />
+</p>
+
+从左到右分别是首页统计与最近笔记、课程分组管理、AI 整理后的笔记详情。
+
 ## 运行环境
 
 - Flutter SDK：建议使用 `3.35.x` 或兼容 Dart `^3.9.2` 的版本。
